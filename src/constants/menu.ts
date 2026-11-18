@@ -19,3 +19,6 @@ export type MenuItemStatus = (typeof MENU_ITEM_STATUSES)[number];
 
 // Free vendors may keep at most this many active (approved) items.
 export const FREE_PLAN_ITEM_LIMIT = 3;
+
+// Items in these statuses count toward the free plan limit.
+export const ACTIVE_MENU_STATUSES: MenuItemStatus[] = ["pending", "approved"];
