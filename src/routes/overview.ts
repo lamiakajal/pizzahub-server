@@ -12,8 +12,12 @@ customerOverviewRouter.use(authenticate, requireRole("customer"));
 
 customerOverviewRouter.get("/", async (req, res) => {
   const user = currentUser(req);
-  const count = (status?: string) =>
-    Order.countDocuments({ customerId: user.id, ...(status ? { status } : {}) });
+  const count = (status?: string) => {
+    // Built as a plain object so TypeScript 7 accepts the optional status.
+    const filter: Record<string, unknown> = { customerId: user.id };
+    if (status) filter.status = status;
+    return Order.countDocuments(filter);
+  };
 
   const [total, pending, accepted, rejected, cancelled] = await Promise.all([
     count(),
