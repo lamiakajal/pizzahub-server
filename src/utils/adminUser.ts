@@ -14,15 +14,15 @@ export const ADMIN_USER_FIELDS = {
 
 type UserDoc = {
   _id: unknown;
-  name?: string;
-  email?: string;
+  name?: string | null;
+  email?: string | null;
   image?: string | null;
-  role?: string;
-  isBlocked?: boolean;
-  businessName?: string;
-  subscriptionPlan?: string;
+  role?: string | null;
+  isBlocked?: boolean | null;
+  businessName?: string | null;
+  subscriptionPlan?: string | null;
   subscriptionExpiresAt?: Date | null;
-  createdAt?: Date;
+  createdAt?: Date | null;
 };
 
 export function toAdminUser(user: UserDoc) {
