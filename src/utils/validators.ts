@@ -13,12 +13,21 @@ export function requireObjectId(value: unknown, label = "id"): string {
   return value;
 }
 
-function readText(value: unknown, label: string, min: number, max: number) {
+export function readText(value: unknown, label: string, min: number, max: number) {
   if (typeof value !== "string") throw new ApiError(400, `${label} is required`);
   const text = value.trim();
   if (text.length < min || text.length > max) {
     throw new ApiError(400, `${label} must be between ${min} and ${max} characters`);
   }
+  return text;
+}
+
+// Optional free text: empty is fine, too long is not.
+export function readOptionalText(value: unknown, label: string, max: number) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string") throw new ApiError(400, `${label} must be text`);
+  const text = value.trim();
+  if (text.length > max) throw new ApiError(400, `${label} must be ${max} characters or fewer`);
   return text;
 }
 
