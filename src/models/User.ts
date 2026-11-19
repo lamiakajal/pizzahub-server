@@ -18,6 +18,10 @@ const userSchema = new Schema(
       default: "free",
     },
     subscriptionExpiresAt: Date,
+    // Stripe bookkeeping. Written only by the payment code on the server.
+    stripeCustomerId: String,
+    stripeSubscriptionId: String,
+    stripeCancelAtPeriodEnd: { type: Boolean, default: false },
     createdAt: Date,
   },
   { collection: "user", strict: false }
