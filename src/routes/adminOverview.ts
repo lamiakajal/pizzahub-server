@@ -57,8 +57,10 @@ router.get("/", async (_req, res) => {
     const role = group._id ?? "customer";
     roleCounts.set(role, (roleCounts.get(role) ?? 0) + group.count);
   }
-  const statusCounts = new Map(statusGroups.map((group) => [group._id, group.count]));
-  const monthCounts = new Map(monthGroups.map((group) => [group._id, group]));
+  const statusCounts = new Map<string, number>();
+  for (const group of statusGroups) statusCounts.set(group._id, group.count);
+  const monthCounts = new Map<string, { count: number; revenue: number }>();
+  for (const group of monthGroups) monthCounts.set(group._id, group);
 
   const usersByRole = ROLES.map((role) => ({ role, count: roleCounts.get(role) ?? 0 }));
   const menuItemsByStatus = MENU_ITEM_STATUSES.map((status) => ({
