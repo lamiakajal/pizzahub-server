@@ -6,9 +6,11 @@ import adminMenuItemsRouter from "./routes/adminMenuItems";
 import customerOrdersRouter from "./routes/customerOrders";
 import healthRouter from "./routes/health";
 import meRouter from "./routes/me";
+import { stripeWebhookHandler } from "./routes/stripeWebhook";
 import menuItemsRouter from "./routes/menuItems";
 import { customerOverviewRouter, vendorOverviewRouter } from "./routes/overview";
 import vendorOrdersRouter from "./routes/vendorOrders";
+import vendorSubscriptionRouter from "./routes/vendorSubscription";
 import vendorMenuItemsRouter from "./routes/vendorMenuItems";
 
 const app = express();
@@ -19,6 +21,10 @@ app.use(
     credentials: true,
   })
 );
+
+// The Stripe webhook needs the raw body to check the signature,
+// so it must be registered before express.json().
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
 
 app.use(express.json());
 
@@ -31,6 +37,7 @@ app.use("/api/customer/orders", customerOrdersRouter);
 app.use("/api/vendor/orders", vendorOrdersRouter);
 app.use("/api/customer/overview", customerOverviewRouter);
 app.use("/api/vendor/overview", vendorOverviewRouter);
+app.use("/api/vendor/subscription", vendorSubscriptionRouter);
 
 app.use(notFound);
 app.use(errorHandler);
