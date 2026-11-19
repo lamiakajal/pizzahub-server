@@ -15,19 +15,21 @@ import {
 
 const OBJECT_ID_PATTERN = /^[a-f\d]{24}$/i;
 
-// Only real vendors can receive a plan.
-async function isVendor(vendorId: string | null | undefined): Promise<vendorId is string> {
-  if (!vendorId || !OBJECT_ID_PATTERN.test(vendorId)) return false;
-  const user = await User.findById(vendorId).select("role").lean();
-  return user?.role === "vendor";
+// Only real vendors can receive a plan. Returns the id, or null for anyone else.
+async function vendorIdOrNull(value: string | null | undefined): Promise<string | null> {
+  if (!value || !OBJECT_ID_PATTERN.test(value)) return null;
+  const user = await User.findById(value).select("role").lean();
+  return user?.role === "vendor" ? value : null;
 }
 
 // The first payment: the vendor finished Checkout.
 async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
   if (session.mode !== "subscription") return;
 
-  const vendorId = session.client_reference_id ?? session.metadata?.vendorId;
-  if (!(await isVendor(vendorId))) {
+  const vendorId = await vendorIdOrNull(
+    session.client_reference_id ?? session.metadata?.vendorId
+  );
+  if (!vendorId) {
     console.warn("Stripe checkout completed for an unknown vendor", session.id);
     return;
   }
@@ -68,9 +70,10 @@ async function onInvoicePaid(invoice: Stripe.Invoice) {
   if (!subscriptionId) return;
 
   const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-  const vendorId =
-    subscription.metadata?.vendorId ?? (await findVendorIdBySubscription(subscriptionId));
-  if (!(await isVendor(vendorId))) return;
+  const vendorId = await vendorIdOrNull(
+    subscription.metadata?.vendorId ?? (await findVendorIdBySubscription(subscriptionId))
+  );
+  if (!vendorId) return;
 
   await recordTransaction({
     key: `invoice_${invoice.id}`,
@@ -95,8 +98,8 @@ async function onInvoiceFailed(invoice: Stripe.Invoice) {
   const subscriptionId = invoiceSubscriptionId(invoice);
   if (!subscriptionId) return;
 
-  const vendorId = await findVendorIdBySubscription(subscriptionId);
-  if (!(await isVendor(vendorId))) return;
+  const vendorId = await vendorIdOrNull(await findVendorIdBySubscription(subscriptionId));
+  if (!vendorId) return;
 
   await recordTransaction({
     key: `invoice_${invoice.id}`,
@@ -111,9 +114,10 @@ async function onInvoiceFailed(invoice: Stripe.Invoice) {
 
 // The subscription ended (cancelled or unpaid): take Premium away.
 async function onSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const vendorId =
-    subscription.metadata?.vendorId ?? (await findVendorIdBySubscription(subscription.id));
-  if (!(await isVendor(vendorId))) return;
+  const vendorId = await vendorIdOrNull(
+    subscription.metadata?.vendorId ?? (await findVendorIdBySubscription(subscription.id))
+  );
+  if (!vendorId) return;
 
   await revokePremium(vendorId);
 }
