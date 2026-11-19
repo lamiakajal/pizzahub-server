@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type Stripe from "stripe";
 import { FREE_PLAN_ITEM_LIMIT } from "../constants/menu";
 import { env } from "../config/env";
 import { authenticate } from "../middleware/authenticate";
@@ -59,7 +60,7 @@ router.post("/checkout", async (req, res) => {
   const record = await User.findById(user.id).select("stripeCustomerId").lean();
   const metadata = { vendorId: user.id, plan: "premium" };
 
-  const session = await stripe.checkout.sessions.create({
+  const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${env.clientUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -67,11 +68,13 @@ router.post("/checkout", async (req, res) => {
     client_reference_id: user.id,
     metadata,
     subscription_data: { metadata },
-    // Reuse the Stripe customer of returning vendors.
-    ...(record?.stripeCustomerId
-      ? { customer: record.stripeCustomerId }
-      : { customer_email: user.email }),
-  });
+  };
+
+  // Reuse the Stripe customer of returning vendors, otherwise start from the email.
+  if (record?.stripeCustomerId) params.customer = record.stripeCustomerId;
+  else params.customer_email = user.email;
+
+  const session = await stripe.checkout.sessions.create(params);
 
   if (!session.url) throw new ApiError(502, "Could not start checkout. Please try again.");
   sendSuccess(res, { url: session.url });
