@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import { connectDB } from "./config/db";
 import { env } from "./config/env";
 import { errorHandler, notFound } from "./middleware/errorHandler";
 import adminMenuItemsRouter from "./routes/adminMenuItems";
@@ -20,16 +21,28 @@ const app = express();
 
 app.use(
   cors({
-    origin: env.clientUrl,
+    origin: env.clientUrls,
     credentials: true,
   })
 );
+
+// Serverless hosts load this file without running server.ts, so the database
+// connection is opened on the first request. The connection is cached, so
+// later requests pass straight through.
+app.use(async (_req, _res, next) => {
+  await connectDB();
+  next();
+});
 
 // The Stripe webhook needs the raw body to check the signature,
 // so it must be registered before express.json().
 app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
 
 app.use(express.json());
+
+app.get("/", (_req, res) => {
+  res.json({ success: true, message: "PizzaHub API is running" });
+});
 
 app.use("/api/health", healthRouter);
 app.use("/api/me", meRouter);
