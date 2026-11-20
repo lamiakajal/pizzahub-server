@@ -180,3 +180,13 @@ src/routes          One router per area
 src/services        Reusable queries such as the menu aggregation
 src/utils           Helpers: ApiError, respond, query, validators
 ```
+
+## Deploying to Vercel
+
+The Express app is exported from `src/app.ts`, which Vercel runs as a function. The database connection opens on the first request, so no extra entry file is needed.
+
+1. Import the `pizzahub-server` repository in Vercel (Framework Preset: Other).
+2. Add these environment variables: `MONGODB_URI`, `CLIENT_URL` (the live client URL, no trailing slash; several origins can be comma separated), `BETTER_AUTH_URL` (same as `CLIENT_URL`), `STRIPE_SECRET_KEY`, `STRIPE_PREMIUM_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `NODE_ENV=production`.
+3. In MongoDB Atlas, allow network access from `0.0.0.0/0`.
+4. In the Stripe dashboard, add a webhook endpoint at `https://<server-url>/api/stripe/webhook` for `checkout.session.completed`, `invoice.payment_succeeded`, `invoice.payment_failed` and `customer.subscription.deleted`. Copy its signing secret into `STRIPE_WEBHOOK_SECRET` and redeploy.
+5. Open the server URL. It should answer `{"success":true,"message":"PizzaHub API is running"}`.
