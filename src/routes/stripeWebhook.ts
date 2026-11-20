@@ -151,6 +151,14 @@ export async function stripeWebhookHandler(req: Request, res: Response) {
     return;
   }
 
+  // The signature is calculated over the exact bytes Stripe sent. If a proxy or
+  // framework already parsed the body, it can no longer be verified.
+  if (!Buffer.isBuffer(req.body)) {
+    console.error("Stripe webhook received a parsed body instead of the raw bytes");
+    res.status(400).json({ success: false, message: "Webhook body must be raw" });
+    return;
+  }
+
   let event: Stripe.Event;
   try {
     event = getStripe().webhooks.constructEvent(req.body, signature, env.stripe.webhookSecret);
