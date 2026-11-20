@@ -50,6 +50,33 @@ The API listens on `PORT` (default 5000). Check `GET /api/health`.
 | `npm run build` | Compile TypeScript to `dist` |
 | `npm run start` | Run the compiled server |
 
+## Orders flow
+
+1. A customer opens an approved menu item and sends an order with a delivery date, delivery address and an optional message. Only customers can order: vendors and admins cannot, and nobody can order their own item.
+2. A new order is `pending`. The delivery date is stored as the start of that day (UTC) and cannot be in the past.
+3. A customer cannot hold two open (`pending` or `accepted`) orders for the same item and delivery date. The server answers `409`, and a unique partial index backs this up.
+4. While an order is `pending`, the vendor can accept or reject it, once. The customer can cancel it. After that the status is final.
+
+| Status | Set by | Meaning |
+| --- | --- | --- |
+| `pending` | System | Waiting for the restaurant |
+| `accepted` | Vendor | The restaurant will deliver it |
+| `rejected` | Vendor | The restaurant declined it |
+| `cancelled` | Customer | The customer withdrew it |
+
+Customers do not pay online. Stripe is used only for the vendor Premium subscription.
+
+## Premium subscription flow
+
+1. A vendor opens **Subscription** in the dashboard and clicks Upgrade. The client calls `POST /api/vendor/subscription/checkout`.
+2. The server creates a Stripe Checkout Session in `subscription` mode with the vendor id in the metadata, and returns its URL.
+3. After paying, Stripe sends the customer to `/payment/success?session_id=...`. That page is a server component that retrieves the session from Stripe and checks `status === "complete"`. It only shows the result: it does not grant Premium.
+4. Premium is activated **only** by the verified webhook `POST /api/stripe/webhook`. The route uses `express.raw`, is mounted before `express.json()`, and checks the Stripe signature.
+5. Handled events: `checkout.session.completed` (activate Premium, record the transaction), `invoice.payment_succeeded` (renewal, extend Premium), `invoice.payment_failed` (record the failure) and `customer.subscription.deleted` (revoke Premium).
+6. Transactions are idempotent: `stripeSessionId` is unique, a Checkout Session id for the first payment and `invoice_<id>` for renewals, so a retried event never creates a duplicate.
+
+To test locally, forward events with the Stripe CLI (`stripe listen --forward-to localhost:5000/api/stripe/webhook`), copy the printed signing secret into `STRIPE_WEBHOOK_SECRET`, and pay with the test card `4242 4242 4242 4242` (any future expiry, any CVC).
+
 ## Environment variables
 
 Names only, never commit real values:
@@ -76,8 +103,10 @@ Every success response is `{ success: true, message?, data, meta? }`. Errors are
 | Menu | `GET /api/menu-items`, `/filters`, `/:id` | Public |
 | Vendor menu | `/api/vendor/menu-items` | Vendor |
 | Vendor orders | `/api/vendor/orders` | Vendor |
+| Vendor subscription | `GET /api/vendor/subscription`, `POST /checkout`, `POST /cancel` | Vendor |
+| Stripe webhook | `POST /api/stripe/webhook` | Stripe signature |
 | Customer orders | `/api/customer/orders` | Customer |
-| Overviews | `/api/customer/overview`, `/api/vendor/overview` | Customer, vendor |
+| Overviews | `/api/customer/overview`, `/api/vendor/overview` (stat counts plus chart data) | Customer, vendor |
 | Admin menu | `/api/admin/menu-items` | Admin |
 | Admin users | `GET /api/admin/users`, `GET /api/admin/users/:id`, `PATCH /api/admin/users/:id/block` | Admin |
 | Admin transactions | `GET /api/admin/transactions` (read only) | Admin |
@@ -108,7 +137,11 @@ The route builds a `$match` object (always `status: "approved"`) and passes it t
 4. `$sort` uses one of the fixed sort specs: `price_asc` is `{ price: 1 }`, `price_desc` is `{ price: -1 }`, and `featured` is `{ isPremium: -1, createdAt: -1 }`. An `_id` tie breaker keeps pages stable.
 5. `$facet` returns the page (`$skip`, `$limit`, `$project` of safe fields) and the total count in one round trip, which feeds `meta`.
 
-### 2. JWT verification
+### 2. Stripe Premium subscription
+
+See "Premium subscription flow" above. In short: Checkout Session in subscription mode, a webhook with the raw body and signature check, Premium granted only from verified events, and idempotent transactions keyed by `stripeSessionId`.
+
+### 3. JWT verification
 
 1. The client app uses the Better Auth `jwt()` plugin. After sign in, `authClient.token()` returns a short-lived signed JWT.
 2. The browser sends it as `Authorization: Bearer <token>`.
@@ -116,6 +149,25 @@ The route builds a `$match` object (always `status: "approved"`) and passes it t
 4. The user id from the token is used to load the user from MongoDB. Role, block status and plan always come from the database, never from the token.
 5. Responses: `401` for a missing, invalid or expired token or a deleted user, `403` for a blocked account.
 6. `middleware/authorize.ts` (`requireRole("admin")`, or several roles) returns `403` when the role does not match. Routes mount `authenticate` first and `requireRole` second.
+
+## Optional features
+
+- **Dark mode:** a theme toggle in the navbar and dashboard. The choice is saved in the browser and applied before first paint.
+- **Order status timeline:** the order objects include `updatedAt`, and the client details panel shows a vertical timeline for customers and vendors: order placed, then either waiting for the restaurant or the final step (accepted, rejected or cancelled) with its date.
+
+## Deployment
+
+Fill these in after deploying (placeholders for now):
+
+| Item | Value |
+| --- | --- |
+| Live site | `https://your-pizzahub-site.vercel.app` |
+| Live API | `https://your-pizzahub-api.vercel.app` |
+| Admin test account | email: `<admin email>` / password: `<admin password>` |
+| Vendor test account | email: `<vendor email>` / password: `<vendor password>` |
+| Customer test account | email: `<customer email>` / password: `<customer password>` |
+
+Production checklist: set every environment variable on both apps, set `CLIENT_URL` on the server to the live site, add the live Google OAuth redirect URI, and register the live webhook URL (`<live API>/api/stripe/webhook`) in Stripe.
 
 ## Project structure
 
