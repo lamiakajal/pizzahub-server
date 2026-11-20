@@ -3,6 +3,7 @@ import { authenticate } from "../middleware/authenticate";
 import { requireRole } from "../middleware/authorize";
 import { MenuItem } from "../models/MenuItem";
 import { Order } from "../models/Order";
+import { itemsByStatus, orderCharts } from "../services/overviewStats";
 import { currentUser } from "../utils/currentUser";
 import { sendSuccess } from "../utils/respond";
 import { isPremiumActive } from "../utils/subscription";
@@ -19,15 +20,16 @@ customerOverviewRouter.get("/", async (req, res) => {
     return Order.countDocuments(filter);
   };
 
-  const [total, pending, accepted, rejected, cancelled] = await Promise.all([
+  const [total, pending, accepted, rejected, cancelled, charts] = await Promise.all([
     count(),
     count("pending"),
     count("accepted"),
     count("rejected"),
     count("cancelled"),
+    orderCharts("customerId", user.id),
   ]);
 
-  sendSuccess(res, { total, pending, accepted, rejected, cancelled });
+  sendSuccess(res, { total, pending, accepted, rejected, cancelled, ...charts });
 });
 
 export const vendorOverviewRouter = Router();
@@ -36,11 +38,13 @@ vendorOverviewRouter.use(authenticate, requireRole("vendor"));
 vendorOverviewRouter.get("/", async (req, res) => {
   const user = currentUser(req);
 
-  const [totalItems, activeItems, pendingOrders, acceptedOrders] = await Promise.all([
+  const [totalItems, activeItems, pendingOrders, acceptedOrders, charts, itemStatuses] = await Promise.all([
     MenuItem.countDocuments({ vendorId: user.id }),
     MenuItem.countDocuments({ vendorId: user.id, status: "approved" }),
     Order.countDocuments({ vendorId: user.id, status: "pending" }),
     Order.countDocuments({ vendorId: user.id, status: "accepted" }),
+    orderCharts("vendorId", user.id),
+    itemsByStatus(user.id),
   ]);
 
   sendSuccess(res, {
@@ -48,6 +52,8 @@ vendorOverviewRouter.get("/", async (req, res) => {
     activeItems,
     pendingOrders,
     acceptedOrders,
+    ...charts,
+    itemsByStatus: itemStatuses,
     plan: isPremiumActive(user) ? "premium" : "free",
     subscriptionExpiresAt: user.subscriptionExpiresAt,
   });
