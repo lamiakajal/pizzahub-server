@@ -6,6 +6,7 @@ import { requireRole } from "../middleware/authorize";
 import { MenuItem } from "../models/MenuItem";
 import { Transaction } from "../models/Transaction";
 import { User } from "../models/User";
+import { monthsStart, recentMonths } from "../utils/months";
 import { sendSuccess } from "../utils/respond";
 
 const router = Router();
@@ -14,21 +15,9 @@ router.use(authenticate, requireRole("admin"));
 
 const MONTHS_SHOWN = 6;
 
-// "2026-11" style labels for the last N months, oldest first (UTC).
-function recentMonths(count: number) {
-  const now = new Date();
-  const labels: string[] = [];
-  for (let i = count - 1; i >= 0; i--) {
-    const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    labels.push(`${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`);
-  }
-  return labels;
-}
-
 router.get("/", async (_req, res) => {
   const months = recentMonths(MONTHS_SHOWN);
-  const [firstYear, firstMonth] = months[0].split("-").map(Number);
-  const since = new Date(Date.UTC(firstYear, firstMonth - 1, 1));
+  const since = monthsStart(months);
 
   const [roleGroups, statusGroups, monthGroups, transactions] = await Promise.all([
     User.aggregate<{ _id: string | null; count: number }>([
