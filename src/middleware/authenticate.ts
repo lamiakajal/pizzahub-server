@@ -48,9 +48,12 @@ export async function authenticate(
       | string
       | undefined;
   } catch (error) {
-    if (env.nodeEnv !== "production") {
-      console.warn("JWT verification failed:", (error as Error).message);
-    }
+    console.warn(
+      "JWT verification failed:",
+      (error as Error).message,
+      "issuer:",
+      env.betterAuthUrl,
+    );
     throw new ApiError(401, "Invalid or expired token");
   }
 
