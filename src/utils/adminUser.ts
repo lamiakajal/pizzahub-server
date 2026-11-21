@@ -1,5 +1,4 @@
-// Safe fields an admin may see about a user. Nothing else from the
-// "user" collection (sessions, tokens, phone, ...) is ever returned.
+// Fields the admin user list reads. Everything else stays in the database.
 export const ADMIN_USER_FIELDS = {
   name: 1,
   email: 1,
@@ -12,6 +11,7 @@ export const ADMIN_USER_FIELDS = {
   createdAt: 1,
 } as const;
 
+// Fields that were never set come back as null or missing from .lean().
 type UserDoc = {
   _id: unknown;
   name?: string | null;

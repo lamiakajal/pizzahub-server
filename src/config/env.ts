@@ -11,11 +11,19 @@ for (const key of required) {
   }
 }
 
+// CLIENT_URL may hold more than one origin, separated by commas (for example
+// localhost and the live site). The first one is used for links back to the client.
+const clientUrls = (process.env.CLIENT_URL as string)
+  .split(",")
+  .map((url) => url.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
 export const env = {
   port: Number(process.env.PORT) || 5000,
   nodeEnv: process.env.NODE_ENV || "development",
   mongoUri: process.env.MONGODB_URI as string,
-  clientUrl: process.env.CLIENT_URL as string,
+  clientUrl: clientUrls[0],
+  clientUrls,
   // Base URL of the Better Auth instance (the Next.js app).
   // Used as the JWT issuer and as the host of the public key set.
   betterAuthUrl: (process.env.BETTER_AUTH_URL as string).replace(/\/$/, ""),
