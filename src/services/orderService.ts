@@ -43,6 +43,7 @@ export type PopulatedOrder = {
   deliveryAddress: string;
   message?: string;
   createdAt: Date;
+  updatedAt: Date;
   itemId: unknown;
   vendorId: unknown;
   customerId: unknown;
@@ -68,6 +69,7 @@ export function serializeOrder(order: PopulatedOrder) {
     deliveryAddress: order.deliveryAddress,
     message: order.message ?? "",
     createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
     item: pick(order.itemId, ["itemName", "images", "price", "category"]),
     vendor: pick(order.vendorId, ["name", "image", "businessName"]),
     customer: pick(order.customerId, ["name", "email", "image"]),
