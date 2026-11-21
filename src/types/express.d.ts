@@ -1,3 +1,4 @@
+import "express";
 import type { AuthUser } from "./auth";
 
 declare global {
