@@ -1,5 +1,4 @@
 import type { NextFunction, Request, Response } from "express";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { isValidObjectId } from "mongoose";
 import { env } from "../config/env";
 import { ROLES } from "../constants/roles";
@@ -8,14 +7,28 @@ import type { AuthUser } from "../types/auth";
 import { ApiError } from "../utils/ApiError";
 import { setRequestUser } from "../utils/requestUser";
 
-// Public keys come from Better Auth and are cached by jose.
-// A new key id triggers a refetch, so key rotation needs no restart.
-const jwks = createRemoteJWKSet(new URL(`${env.betterAuthUrl}/api/auth/jwks`));
+const importJose = new Function('return import("jose")') as () => Promise<
+  typeof import("jose")
+>;
+
+let cachedJwks: ReturnType<
+  (typeof import("jose"))["createRemoteJWKSet"]
+> | null = null;
+
+async function getJose() {
+  const jose = await importJose();
+  if (!cachedJwks) {
+    cachedJwks = jose.createRemoteJWKSet(
+      new URL(`${env.betterAuthUrl}/api/auth/jwks`),
+    );
+  }
+  return { jwtVerify: jose.jwtVerify, jwks: cachedJwks };
+}
 
 export async function authenticate(
   req: Request,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   const header = req.headers.authorization;
 
@@ -27,6 +40,7 @@ export async function authenticate(
 
   let userId: string | undefined;
   try {
+    const { jwtVerify, jwks } = await getJose();
     const { payload } = await jwtVerify(token, jwks, {
       issuer: env.betterAuthUrl,
     });
