@@ -6,6 +6,7 @@ import { ROLES } from "../constants/roles";
 import { User } from "../models/User";
 import type { AuthUser } from "../types/auth";
 import { ApiError } from "../utils/ApiError";
+import { setRequestUser } from "../utils/requestUser";
 
 // Public keys come from Better Auth and are cached by jose.
 // A new key id triggers a refetch, so key rotation needs no restart.
@@ -66,6 +67,6 @@ export async function authenticate(
     subscriptionExpiresAt: user.subscriptionExpiresAt ?? null,
   };
 
-  req.user = authUser;
+  setRequestUser(req, authUser);
   next();
 }

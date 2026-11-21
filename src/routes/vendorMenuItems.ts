@@ -5,6 +5,7 @@ import { requireRole } from "../middleware/authorize";
 import { MenuItem } from "../models/MenuItem";
 import { assertCanHaveActiveItem, countActiveItems } from "../services/menuItemService";
 import { ApiError } from "../utils/ApiError";
+import { currentUser } from "../utils/currentUser";
 import { buildMeta, escapeRegex, parsePagination, queryString } from "../utils/query";
 import { sendSuccess } from "../utils/respond";
 import { isPremiumActive } from "../utils/subscription";
@@ -16,8 +17,7 @@ const router = Router();
 router.use(authenticate, requireRole("vendor"));
 
 function vendorOf(req: Request) {
-  if (!req.user) throw new ApiError(401, "Authentication required");
-  return req.user;
+  return currentUser(req);
 }
 
 // Loads an item and makes sure it belongs to the signed-in vendor.
