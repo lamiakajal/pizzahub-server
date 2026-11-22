@@ -29,6 +29,14 @@ Use this account to explore the admin dashboard on the live site:
 
 This is a demo account on a demo database. Do not reuse this password anywhere else.
 
+## Testing the Premium subscription
+
+The live site uses Stripe in test mode. To upgrade a vendor account to Premium:
+
+1. Sign in as a vendor and open **Subscription** in the dashboard, then click **Upgrade to Premium**.
+2. On the Stripe Checkout page, pay with the test card `4242 4242 4242 4242`, any future expiry date, any 3-digit CVC and any postal code.
+3. After the payment, the Premium badge appears once Stripe's verified webhook reaches the server (usually within a few seconds).
+
 ## Features
 
 - Public menu API with search, filters, sorting and pagination.
