@@ -1,10 +1,33 @@
+<div align="center">
+
+![PizzaHub](docs/banner.jpg)
+
 # PizzaHub Server
 
-REST API for PizzaHub, a pizza ordering and delivery platform. It serves the public menu, role protected APIs for customers, vendors and admins, and the Premium subscription flow.
+**The REST API behind PizzaHub, a full-stack pizza ordering and delivery platform.**
 
-- Live API: `https://your-pizzahub-api.vercel.app` (placeholder, replace after deployment)
-- Server repo: https://github.com/lamiakajal/pizzahub-server
-- Client repo: https://github.com/lamiakajal/pizzahub-client
+![Node.js](https://img.shields.io/badge/Node.js-22-339933?logo=nodedotjs&logoColor=white) ![Express](https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white) ![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47a248?logo=mongodb&logoColor=white) ![JWT](https://img.shields.io/badge/JWT-JWKS-f97316?logo=jsonwebtokens&logoColor=white) ![Stripe](https://img.shields.io/badge/Stripe-Webhooks-635bff?logo=stripe&logoColor=white)
+
+</div>
+
+This API serves the public menu, role protected endpoints for customers, vendors and admins, and the Premium subscription flow. The web app lives in the [client repository](https://github.com/lamiakajal/pizzahub-client).
+
+| | |
+| --- | --- |
+| Live website | https://pizzahub-lamiakajal.vercel.app |
+| Live server (API) | https://pizzahub-server-lamiakajal.vercel.app |
+| Client repository | https://github.com/lamiakajal/pizzahub-client |
+| Server repository | https://github.com/lamiakajal/pizzahub-server |
+
+## Demo admin account
+
+Use this account to explore the admin dashboard on the live site:
+
+| Email | Password |
+| --- | --- |
+| `lamiakajal@pizzahub.com` | `LamiaKajal@123` |
+
+This is a demo account on a demo database. Do not reuse this password anywhere else.
 
 ## Features
 
@@ -20,14 +43,14 @@ REST API for PizzaHub, a pizza ordering and delivery platform. It serves the pub
 
 - Node.js, Express 5, TypeScript
 - MongoDB with Mongoose 9
-- `jose` for JWT verification
+- Node's built-in `node:crypto` for JWT verification
 - `stripe` for payments
 - `cors`, `dotenv`
 - `tsx` for development
 
 ## Getting started
 
-Requirements: Node.js 20 or newer and a MongoDB Atlas database (the same one the client uses).
+Requirements: Node.js 22 and a MongoDB Atlas database (the same one the client uses).
 
 ```bash
 git clone https://github.com/lamiakajal/pizzahub-server.git
@@ -145,7 +168,7 @@ See "Premium subscription flow" above. In short: Checkout Session in subscriptio
 
 1. The client app uses the Better Auth `jwt()` plugin. After sign in, `authClient.token()` returns a short-lived signed JWT.
 2. The browser sends it as `Authorization: Bearer <token>`.
-3. `middleware/authenticate.ts` verifies the signature and issuer with `jose` against the remote key set at `BETTER_AUTH_URL/api/auth/jwks`. Keys are cached and refetched when a new key id appears.
+3. `middleware/authenticate.ts` verifies the signature and issuer with `node:crypto` against the remote key set at `BETTER_AUTH_URL/api/auth/jwks`. Keys are cached and refetched when a new key id appears.
 4. The user id from the token is used to load the user from MongoDB. Role, block status and plan always come from the database, never from the token.
 5. Responses: `401` for a missing, invalid or expired token or a deleted user, `403` for a blocked account.
 6. `middleware/authorize.ts` (`requireRole("admin")`, or several roles) returns `403` when the role does not match. Routes mount `authenticate` first and `requireRole` second.
@@ -157,17 +180,13 @@ See "Premium subscription flow" above. In short: Checkout Session in subscriptio
 
 ## Deployment
 
-Fill these in after deploying (placeholders for now):
-
 | Item | Value |
 | --- | --- |
-| Live site | `https://your-pizzahub-site.vercel.app` |
-| Live API | `https://your-pizzahub-api.vercel.app` |
-| Admin test account | email: `<admin email>` / password: `<admin password>` |
-| Vendor test account | email: `<vendor email>` / password: `<vendor password>` |
-| Customer test account | email: `<customer email>` / password: `<customer password>` |
+| Live website | https://pizzahub-lamiakajal.vercel.app |
+| Live server (API) | https://pizzahub-server-lamiakajal.vercel.app |
+| Demo admin account | email: `lamiakajal@pizzahub.com` / password: `LamiaKajal@123` |
 
-Production checklist: set every environment variable on both apps, set `CLIENT_URL` on the server to the live site, add the live Google OAuth redirect URI, and register the live webhook URL (`<live API>/api/stripe/webhook`) in Stripe.
+Production checklist: set every environment variable on both apps, set `CLIENT_URL` on the server to the live website, add the live Google OAuth redirect URI, and register the live webhook URL (`https://pizzahub-server-lamiakajal.vercel.app/api/stripe/webhook`) in Stripe.
 
 ## Project structure
 
