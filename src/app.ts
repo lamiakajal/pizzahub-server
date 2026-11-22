@@ -26,16 +26,13 @@ app.use(
   })
 );
 
-// Serverless hosts load this file without running server.ts, so the database
-// connection is opened on the first request. The connection is cached, so
-// later requests pass straight through.
+// Serverless hosts skip server.ts, so connect on the first request (cached after that).
 app.use(async (_req, _res, next) => {
   await connectDB();
   next();
 });
 
-// The Stripe webhook needs the raw body to check the signature,
-// so it must be registered before express.json().
+// Stripe signature check needs the raw body, so this goes before express.json().
 app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
 
 app.use(express.json());

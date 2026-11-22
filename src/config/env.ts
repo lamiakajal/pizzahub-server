@@ -11,8 +11,7 @@ for (const key of required) {
   }
 }
 
-// CLIENT_URL may hold more than one origin, separated by commas (for example
-// localhost and the live site). The first one is used for links back to the client.
+// CLIENT_URL can hold several comma separated origins. The first one is used for links.
 const clientUrls = (process.env.CLIENT_URL as string)
   .split(",")
   .map((url) => url.trim().replace(/\/$/, ""))
@@ -24,11 +23,9 @@ export const env = {
   mongoUri: process.env.MONGODB_URI as string,
   clientUrl: clientUrls[0],
   clientUrls,
-  // Base URL of the Better Auth instance (the Next.js app).
-  // Used as the JWT issuer and as the host of the public key set.
+  // Better Auth base URL: JWT issuer and JWKS host.
   betterAuthUrl: (process.env.BETTER_AUTH_URL as string).replace(/\/$/, ""),
-  // Stripe keys are optional at startup so the rest of the API runs without them.
-  // Payment routes check for them and answer with a clear error when missing.
+  // Optional at startup: payment routes return a clear error when missing.
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY ?? "",
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
